@@ -1,0 +1,60 @@
+# Nombre del workflow visible en GitHub Actions
+name: API CI - RealEstate
+
+# Eventos que activan el workflow: push y pull request sobre la rama main
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    # Nombre del job que se mostrará en GitHub Actions
+    name: Test API en Node.js ${{ matrix.node }}
+    # Runner en el que se ejecutará (sistema operativo)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Se definirá una matriz para probar múltiples versiones de Node.js
+        node: [16.x, 18.x]
+
+    steps:
+      # Paso 1: Clonar el repositorio para tener acceso al código fuente
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      # Paso 2: Configurar la versión de Node.js según la matriz
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+
+      # Paso 3: Usar caché de dependencias npm para acelerar los builds
+      - name: Cachear dependencias npm
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Paso 4: Instalar las dependencias de forma limpia (ideal para CI)
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Paso 5: Ejecutar las pruebas automatizadas con Jest
+      - name: Ejecutar pruebas con Jest
+        run: npm test
+
+      # Paso 6: Mensaje opcional en consola si todo sale bien
+      - name: Reportar éxito
+        if: success()
+        run: echo "✅ API funcional en Node ${{
+          matrix.node }}"
+
+      # Paso 7: Mensaje opcional en consola si ocurre un error
+      - name: Reportar error
+        if: failure()
+        run: echo "❌ Falla detectada en los tests para Node ${{
+          matrix.node }}"
